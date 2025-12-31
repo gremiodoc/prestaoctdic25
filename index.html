@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Prestaciones Sociales</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #004aad; /* Fondo Azul solicitado */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Cabecera con los Logos */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .logo {
+            height: 80px; /* Tamaño de los logos */
+            object-fit: contain;
+        }
+
+        h1 {
+            color: #003366;
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        /* Estilos del buscador */
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        input[type="number"] {
+            width: 80%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+            outline: none;
+            /* Eliminar flechas de número en navegadores */
+            -moz-appearance: textfield;
+        }
+        
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"]:focus {
+            border-color: #004aad;
+        }
+
+        button {
+            background-color: #004aad;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #003366;
+        }
+
+        button.reset-btn {
+            background-color: #6c757d;
+            margin-left: 10px;
+        }
+        
+        button.reset-btn:hover {
+            background-color: #5a6268;
+        }
+
+        /* Resultados */
+        #resultado {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none; /* Oculto por defecto */
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result-data {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin: 10px 0;
+            color: #333;
+            text-align: left;
+            padding-left: 20px;
+        }
+        
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <img src="logomppe.jpg" alt="Logo MPPE" class="logo">
+            
+            <img src="logo gremio.png" alt="Logo Gremio" class="logo">
+        </div>
+
+        <h1>CONSULTA SI APARECES PARA COBRAR PRESTACIONES SOCIALES DIC/25</h1>
+
+        <div class="search-box">
+            <input type="number" id="cedulaInput" placeholder="Coloca acá tu Cédula de Identidad">
+            <br>
+            <button onclick="buscarCedula()">Consultar</button>
+            <button onclick="reiniciar()" class="reset-btn">Reiniciar</button>
+        </div>
+
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        let baseDeDatos = [];
+
+        // Al cargar la página, leemos el archivo CSV
+        window.onload = function() {
+            // NOTA: El archivo debe llamarse 'lista.csv' en GitHub
+            Papa.parse("lista.csv", {
+                download: true,
+                header: true,
+                delimiter: ";", // <--- IMPORTANTE: Forzamos el uso de punto y coma
+                skipEmptyLines: true,
+                dynamicTyping: true, // Esto convierte los números automáticamente
+                complete: function(results) {
+                    baseDeDatos = results.data;
+                    console.log("Datos cargados correctamente:", baseDeDatos.length);
+                },
+                error: function(err) {
+                    console.error("Error al cargar CSV:", err);
+                    document.getElementById('resultado').innerHTML = "Error cargando la lista. Verifique que el archivo 'lista.csv' está subido.";
+                    document.getElementById('resultado').style.display = 'block';
+                    document.getElementById('resultado').className = 'error';
+                }
+            });
+        };
+
+        function buscarCedula() {
+            const inputCedula = document.getElementById('cedulaInput').value.trim();
+            const divResultado = document.getElementById('resultado');
+
+            if (!inputCedula) {
+                alert("Por favor ingrese una cédula");
+                return;
+            }
+
+            // Buscamos en la base de datos
+            // Como dynamicTyping está activo, CEDULA es un número, así que usamos == para comparar (flexible)
+            const persona = baseDeDatos.find(row => row['CEDULA'] == inputCedula);
+
+            divResultado.style.display = 'block';
+            divResultado.className = ''; 
+
+            if (persona) {
+                // Caso Positivo
+                divResultado.className = 'success';
+                divResultado.innerHTML = `
+                    <h3>✅ Felicitaciones, usted cobrará Prestaciones Sociales</h3>
+                    <div class="result-data">
+                        <p>NOMBRES Y APELLIDOS: ${persona['NOMBRES Y APELLIDOS']}</p>
+                        <p>ESTADO: ${persona['ESTADO']}</p>
+                    </div>
+                `;
+            } else {
+                // Caso Negativo
+                divResultado.className = 'error';
+                divResultado.innerHTML = `
+                    <h3>❌ Lamentablemente, usted NO cobrará Prestaciones Sociales</h3>
+                    <p>Verifique que la cédula esté escrita correctamente.</p>
+                `;
+            }
+        }
+
+        function reiniciar() {
+            document.getElementById('cedulaInput').value = '';
+            document.getElementById('resultado').style.display = 'none';
+            document.getElementById('cedulaInput').focus();
+        }
+    </script>
+
+</body>
+</html>
